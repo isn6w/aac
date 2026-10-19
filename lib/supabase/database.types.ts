@@ -205,6 +205,21 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      invoice_payables: {
+        Row: {
+          invoice_id: string;
+          due_date: string;
+          tax_total_cents: number | null;
+          boleto_reference: string | null;
+          is_paid: boolean;
+          paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       product_batches: {
         Row: {
           id: string;
@@ -343,6 +358,22 @@ export type Database = {
           p_target_profit_bps: number;
         };
         Returns: string;
+      };
+      update_invoice_payable: {
+        Args: {
+          p_invoice_id: string;
+          p_due_date: string;
+          p_tax_total_cents: number | null;
+          p_boleto_reference: string | null;
+        };
+        Returns: undefined;
+      };
+      set_invoice_payable_paid: {
+        Args: {
+          p_invoice_id: string;
+          p_is_paid: boolean;
+        };
+        Returns: undefined;
       };
       record_sale: {
         Args: {

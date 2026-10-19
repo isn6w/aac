@@ -18,6 +18,7 @@ export default function ThemeToggle() {
     setTheme(nextTheme);
     document.documentElement.dataset.theme = nextTheme;
     window.localStorage.setItem('aac-theme', nextTheme);
+    window.dispatchEvent(new Event('aac-theme-change'));
   }
 
   return (

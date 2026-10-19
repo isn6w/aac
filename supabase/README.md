@@ -1,9 +1,5 @@
 # Supabase: catálogo e estoque inicial
 
-Para configurar um projeto Supabase novo e publicar a aplicacao na Vercel, siga
-o guia [Deploy na Vercel com Supabase](../DEPLOYMENT.md). As instrucoes abaixo
-detalham o modelo de dados e as migrations.
-
 1. As variáveis locais já foram gravadas em `.env.local` (arquivo ignorado pelo
    Git). Configure os mesmos nomes no ambiente de produção da Vercel. Nunca use
    uma chave `service_role` no navegador.
@@ -160,3 +156,27 @@ migration de configurações solicita também a atualização do cache do PostgR
     `20261010193500_sale_installments.sql`; por último,
     `20261010195000_pix_payment_settings.sql`. A migration de parcelas depende
     da tabela `public.sales` criada pela migration-base de vendas.
+
+12. Para habilitar o assistente financeiro, aplique
+   `migrations/20261013120000_invoice_payables.sql` depois das migrations de
+   notas e estoque. Ela cria um título de contas a pagar na mesma transação de
+   cada nota registrada, inicialmente com vencimento em 30 dias; notas já
+   existentes também recebem um título. Admins e gerentes podem ajustar
+   vencimento, impostos e referência/linha digitável, além de marcar ou reabrir
+   pagamentos. O valor do título acompanha o total da nota; impostos ficam
+   como “não informado” até que o operador os preencha. A aplicação não gera
+   nem liquida boletos bancários.
+
+   Os alertas locais destacam títulos vencidos e os que vencem em até 7 dias.
+   Para solicitar uma síntese por IA e usar o chat do espaço de trabalho,
+   configure `GEMINI_API_KEY` como variável privada do servidor e,
+   opcionalmente, `GEMINI_MODEL` (padrão `gemini-3.8-flash`) em `.env.local` e
+   na Vercel. Nunca use prefixo `NEXT_PUBLIC_` para a chave. Reinicie o servidor
+   local após alterar o ambiente. A análise financeira envia fornecedor, número da nota, vencimento,
+   valor e imposto ao provedor de IA somente após o operador clicar em
+   “Analisar com IA”; sem a chave, os alertas por vencimento continuam ativos.
+   O chat usa o cliente Supabase da sessão autenticada e, conforme o assunto,
+   lê somente catálogo ativo ou notas/títulos financeiros pelas permissões RLS;
+   não envia linha digitável, não executa SQL gerado pela IA e nunca grava dados.
+   Esses trechos consultados são enviados ao Gemini junto da pergunta. A conversa
+   é temporária no navegador.

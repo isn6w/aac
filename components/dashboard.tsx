@@ -9,6 +9,8 @@ import PriceCalculator from '@/components/price-calculator';
 import PricingSettings from '@/components/pricing-settings';
 import PurchaseInvoices from '@/components/purchase-invoices';
 import PointOfSale from '@/components/point-of-sale';
+import FinanceAssistant from '@/components/finance-assistant';
+import WorkspaceChat from '@/components/workspace-chat';
 
 const supabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -21,7 +23,7 @@ const modules = [
   ['02', 'Calculadora de preços', 'Custos, margens e formação de preços.'],
   ['03', 'Clientes', 'Cadastro e relacionamento com clientes.'],
   ['04', 'Vendedores', 'Cadastro e organização da equipe comercial.'],
-  ['05', 'Pagamentos', 'Apoio à operação e conferência dos recebimentos.'],
+  ['05', 'Financeiro', 'Contas a pagar, boletos e vencimentos.'],
   ['06', 'Informação tributária', 'Conteúdo orientativo e ferramentas de consulta.'],
   ['07', 'Gráficos e relatórios', 'Indicadores calculados a partir de dados reais.'],
   ['08', 'Integrações', 'Conexões com serviços definidos para o negócio.'],
@@ -35,15 +37,60 @@ export default function Dashboard() {
   const isPricingPage = pathname === '/dashboard/pricing';
   const isSettingsPage = pathname === '/dashboard/settings';
   const isInvoicesPage = pathname === '/dashboard/invoices';
+  const isFinancePage = pathname === '/dashboard/finance';
+  const isAssistantPage = pathname === '/dashboard/assistant';
   const isSalesPage = pathname === '/dashboard/sales';
   const [isReady, setIsReady] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [hasUnlockedWorkspace, setHasUnlockedWorkspace] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [clientIp, setClientIp] = useState('Consultando...');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     setSidebarCollapsed(window.localStorage.getItem('aac-sidebar-collapsed') === 'true');
+    setHasUnlockedWorkspace(window.sessionStorage.getItem('aac-workspace-unlocked') === 'true');
   }, []);
+
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(new Date());
+    updateTime();
+    const interval = window.setInterval(updateTime, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/client-info', { cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) throw new Error('IP indisponível');
+        const result: unknown = await response.json();
+        if (!result || typeof result !== 'object' || !('ip' in result)
+          || typeof result.ip !== 'string') throw new Error('IP indisponível');
+        if (!cancelled) setClientIp(result.ip);
+      })
+      .catch(() => {
+        if (!cancelled) setClientIp('Indisponível');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!isSalesPage) return;
+    function handleWorkspaceShortcut(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'F2' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const unlocked = window.sessionStorage.getItem('aac-workspace-unlocked') === 'true';
+      if (!unlocked && !window.confirm('Deseja realmente desbloquear o acesso ao espaço de trabalho e às demais ferramentas?')) return;
+      window.sessionStorage.setItem('aac-workspace-unlocked', 'true');
+      setHasUnlockedWorkspace(true);
+      router.push('/dashboard');
+    }
+    window.addEventListener('keydown', handleWorkspaceShortcut);
+    return () => window.removeEventListener('keydown', handleWorkspaceShortcut);
+  }, [isSalesPage, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +137,7 @@ export default function Dashboard() {
         const { error } = await createClient().auth.signOut();
         if (error) throw new Error('Não foi possível encerrar a sessão.');
       }
+      sessionStorage.removeItem('aac-workspace-unlocked');
       router.replace('/');
       router.refresh();
     } catch (error) {
@@ -108,8 +156,8 @@ export default function Dashboard() {
   if (!isReady) return null;
 
   return (
-    <div className={`workspace${sidebarCollapsed ? ' workspace-sidebar-collapsed' : ''}`}>
-      <aside className="sidebar" aria-label="Menu principal">
+    <div className={`workspace${sidebarCollapsed ? ' workspace-sidebar-collapsed' : ''}${isSalesPage ? ' workspace-sales-mode' : ''}`}>
+      {!isSalesPage && <aside className="sidebar" aria-label="Menu principal">
         <div className="sidebar-brand-row">
           <a className="brand" href="/" aria-label="A.A.C. início">
             <span className="brand-mark" aria-hidden="true">A</span>
@@ -130,14 +178,16 @@ export default function Dashboard() {
 
         <nav className="main-nav" aria-label="Módulos">
           <span className="nav-heading">ESPAÇO DE TRABALHO</span>
-          <Link className={`nav-item${!isProductsPage && !isPricingPage && !isSettingsPage && !isInvoicesPage && !isSalesPage ? ' nav-item-active' : ''}`} href="/dashboard" aria-current={!isProductsPage && !isPricingPage && !isSettingsPage && !isInvoicesPage && !isSalesPage ? 'page' : undefined} title="Visão geral" aria-label="Visão geral"><span className="nav-label">Visão geral</span><span className="nav-icon" aria-hidden="true">⌂</span></Link>
+          <Link className={`nav-item${!isProductsPage && !isPricingPage && !isSettingsPage && !isInvoicesPage && !isSalesPage && !isFinancePage && !isAssistantPage ? ' nav-item-active' : ''}`} href="/dashboard" aria-current={!isProductsPage && !isPricingPage && !isSettingsPage && !isInvoicesPage && !isSalesPage && !isFinancePage && !isAssistantPage ? 'page' : undefined} title="Visão geral" aria-label="Visão geral"><span className="nav-label">Visão geral</span><span className="nav-icon" aria-hidden="true">⌂</span></Link>
           <span className="nav-heading nav-heading-spaced">MÓDULOS</span>
           <Link className={`nav-item${isSalesPage ? ' nav-item-active' : ''}`} href="/dashboard/sales" aria-current={isSalesPage ? 'page' : undefined} title="Vendas" aria-label="Vendas"><span className="nav-label">Vendas</span><span className="nav-icon" aria-hidden="true">▣</span></Link>
           <Link className={`nav-item${isProductsPage ? ' nav-item-active' : ''}`} href="/dashboard/products" aria-current={isProductsPage ? 'page' : undefined} title="Produtos e estoque" aria-label="Produtos e estoque"><span className="nav-label">Produtos e estoque</span><span className="nav-icon" aria-hidden="true">▦</span></Link>
           <Link className={`nav-item${isPricingPage ? ' nav-item-active' : ''}`} href="/dashboard/pricing" aria-current={isPricingPage ? 'page' : undefined} title="Calculadora de preços" aria-label="Calculadora de preços"><span className="nav-label">Calculadora de preços</span><span className="nav-icon" aria-hidden="true">◈</span></Link>
           <Link className={`nav-item${isSettingsPage ? ' nav-item-active' : ''}`} href="/dashboard/settings" aria-current={isSettingsPage ? 'page' : undefined} title="Configurações" aria-label="Configurações"><span className="nav-label">Configurações</span><span className="nav-icon" aria-hidden="true">⚙</span></Link>
           <Link className={`nav-item${isInvoicesPage ? ' nav-item-active' : ''}`} href="/dashboard/invoices" aria-current={isInvoicesPage ? 'page' : undefined} title="Entrada de notas" aria-label="Entrada de notas"><span className="nav-label">Entrada de notas</span><span className="nav-icon" aria-hidden="true">▤</span></Link>
-          {modules.slice(3, 6).map(([, name], index) => (
+          <Link className={`nav-item${isFinancePage ? ' nav-item-active' : ''}`} href="/dashboard/finance" aria-current={isFinancePage ? 'page' : undefined} title="Financeiro" aria-label="Financeiro"><span className="nav-label">Financeiro</span><span className="nav-icon" aria-hidden="true">＄</span></Link>
+          <Link className={`nav-item${isAssistantPage ? ' nav-item-active' : ''}`} href="/dashboard/assistant" aria-current={isAssistantPage ? 'page' : undefined} title="Assistente IA" aria-label="Assistente IA"><span className="nav-label">Assistente IA</span><span className="nav-icon" aria-hidden="true">✳</span></Link>
+          {modules.slice(3, 5).map(([, name], index) => (
             <button className="nav-item" type="button" disabled key={name} title={name} aria-label={`${name}, planejado`}>
               <span className="nav-label">{name} <span className="nav-planned">Planejado</span></span><span className="nav-icon" aria-hidden="true">{['♙', '▱', 'ⓘ'][index]}</span>
             </button>
@@ -149,14 +199,25 @@ export default function Dashboard() {
           ))}
         </nav>
         <p className="sidebar-note">Nova base <span>·</span> módulos em preparação</p>
-      </aside>
+      </aside>}
 
       <div className="workspace-main">
         <header className="topbar">
-          <div>
-            <span className="topbar-label">CONTA</span>
-            <strong>{localPreview ? 'Administrador local' : 'Conta Supabase'}</strong>
-          </div>
+          {isSalesPage ? (
+            <div className="sales-status-bar" aria-label="Informações do terminal">
+              <a className="brand" href="/dashboard/sales" aria-label="A.A.C. vendas">
+                <span className="brand-mark" aria-hidden="true">A</span><span className="brand-name">A.A.C.</span>
+              </a>
+              <div><span className="topbar-label">DATA E HORA</span><strong>{currentTime?.toLocaleString('pt-BR') ?? 'Carregando...'}</strong></div>
+              <div><span className="topbar-label">IP DA CONEXÃO</span><strong>{clientIp}</strong></div>
+              <p className="sales-shortcut-hint"><kbd>F2</kbd> {hasUnlockedWorkspace ? 'Abrir espaço de trabalho' : 'Desbloquear ferramentas'}</p>
+            </div>
+          ) : (
+            <div>
+              <span className="topbar-label">CONTA</span>
+              <strong>{localPreview ? 'Administrador local' : 'Conta Supabase'}</strong>
+            </div>
+          )}
           <button className="button button-secondary" type="button" onClick={handleSignOut} disabled={isSigningOut}>
             {isSigningOut ? 'Saindo…' : 'Sair'}
           </button>
@@ -164,14 +225,10 @@ export default function Dashboard() {
 
         <main className="content">
           {isSalesPage ? (
-            <>
-              <div className="page-heading">
-                <p className="eyebrow">PDV</p>
-                <h1>Vendas</h1>
-                <p>Registre itens, aplique descontos e finalize recebimentos com segurança.</p>
-              </div>
+            <section className="sales-screen" aria-label="Ponto de venda">
+              <div className="sales-screen-heading"><div><p className="eyebrow">TERMINAL DE VENDAS</p><h1>Frente de caixa</h1></div><span>Operação ativa</span></div>
               <PointOfSale />
-            </>
+            </section>
           ) : isPricingPage ? (
             <>
               <div className="page-heading">
@@ -189,6 +246,24 @@ export default function Dashboard() {
                 <p>Registre compras, lotes e validades e exporte os dados em XML.</p>
               </div>
               <PurchaseInvoices />
+            </>
+          ) : isAssistantPage ? (
+            <>
+              <div className="page-heading">
+                <p className="eyebrow">ESPAÇO DE TRABALHO</p>
+                <h1>Assistente IA</h1>
+                <p>Converse com o Gemini para apoiar sua rotina de administração comercial.</p>
+              </div>
+              <WorkspaceChat />
+            </>
+          ) : isFinancePage ? (
+            <>
+              <div className="page-heading">
+                <p className="eyebrow">CONTAS A PAGAR</p>
+                <h1>Financeiro</h1>
+                <p>Acompanhe boletos das notas, impostos declarados e próximos vencimentos.</p>
+              </div>
+              <FinanceAssistant />
             </>
           ) : isSettingsPage ? (
             <>
@@ -236,7 +311,7 @@ export default function Dashboard() {
                       <h3>{name}</h3>
                       <p>{description}</p>
                       <span className="module-state">
-                        {index === '01' ? 'Em preparação' : index === '02' || index === '09' ? 'Disponível' : 'Planejado'}
+                        {index === '01' ? 'Em preparação' : index === '02' || index === '05' || index === '09' ? 'Disponível' : 'Planejado'}
                       </span>
                     </article>
                   ))}
