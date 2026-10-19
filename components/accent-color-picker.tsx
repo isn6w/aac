@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { applyAccentColor, DEFAULT_ACCENT_COLOR } from '@/lib/appearance';
+import { applyAccentColor, DEFAULT_ACCENT_COLOR, getDefaultAccentColor } from '@/lib/appearance';
 
 export default function AccentColorPicker() {
   const [color, setColor] = useState(DEFAULT_ACCENT_COLOR);
@@ -13,16 +13,21 @@ export default function AccentColorPicker() {
       applyAccentColor(savedColor);
       return;
     }
+    setColor(getDefaultAccentColor());
+  }, []);
+
+  useEffect(() => {
+    function syncDefaultColor() {
+      if (!window.localStorage.getItem('aac-accent-color')) setColor(getDefaultAccentColor());
+    }
+    window.addEventListener('aac-theme-change', syncDefaultColor);
+    return () => window.removeEventListener('aac-theme-change', syncDefaultColor);
   }, []);
 
   function changeColor(value: string) {
     setColor(value);
     applyAccentColor(value);
     window.localStorage.setItem('aac-accent-color', value);
-  }
-
-  function resetColor() {
-    changeColor(DEFAULT_ACCENT_COLOR);
   }
 
   return (
@@ -37,7 +42,6 @@ export default function AccentColorPicker() {
           aria-describedby="accentColorDescription"
         />
         <output htmlFor="aacAccentColor">{color.toUpperCase()}</output>
-        <button className="button button-secondary" type="button" onClick={resetColor}>Restaurar azul</button>
       </div>
       <p id="accentColorDescription">A cor escolhida será aplicada aos destaques e botões e ficará salva neste navegador.</p>
     </div>

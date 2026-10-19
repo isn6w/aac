@@ -244,11 +244,6 @@ export default function PointOfSale() {
       const target = event.target;
       if (isCheckoutOpen) return;
       const key = event.key.toLocaleLowerCase();
-      if (event.key === 'F2') {
-        event.preventDefault();
-        searchRef.current?.focus();
-        return;
-      }
       if (key === 'f' && target instanceof HTMLElement && target.id === 'posProductSearch') {
         event.preventDefault();
         openCheckout();
@@ -609,7 +604,7 @@ export default function PointOfSale() {
               autoComplete="off"
             />
           </label>
-          <span className="pos-stock-hint">Bipe e pressione Enter · F2 buscar · Q quantidade · P preço · D desconto · I remover item · K cancelar venda · F finalizar.</span>
+          <span className="pos-stock-hint">Bipe e pressione Enter · Q quantidade · P preço · D desconto · I remover item · K cancelar venda · F finalizar.</span>
           <button className="button button-secondary" type="button" onClick={cancelCurrentSale} disabled={!lines.length || isSaving}>
             Cancelar venda <kbd>K</kbd>
           </button>

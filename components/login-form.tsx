@@ -11,6 +11,7 @@ const localPreview = process.env.NODE_ENV === 'development' && !supabaseConfigur
 
 export default function LoginForm() {
   const router = useRouter();
+  const [showWelcome, setShowWelcome] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,7 +30,7 @@ export default function LoginForm() {
           throw new Error('Na pré-visualização local, use admin/admin.');
         }
         sessionStorage.setItem('aac-local-preview', 'true');
-        router.push('/dashboard');
+        router.push('/dashboard/sales');
         return;
       }
 
@@ -41,13 +42,33 @@ export default function LoginForm() {
       const { error } = await supabase.auth.signInWithPassword({ email: username, password });
       if (error) throw new Error('Não foi possível autenticar. Verifique o e-mail e a senha.');
 
-      router.push('/dashboard');
+      router.push('/dashboard/sales');
       router.refresh();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Não foi possível entrar.');
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (showWelcome) {
+    return (
+      <main className="landing-view">
+        <header className="landing-header">
+          <a className="brand" href="/" aria-label="A.A.C. início">
+            <span className="brand-mark" aria-hidden="true">A</span><span className="brand-name">A.A.C.</span>
+          </a>
+          <span>ASSISTENTE DE ADMINISTRAÇÃO COMERCIAL</span>
+        </header>
+        <section className="landing-content" aria-labelledby="landingTitle">
+          <p className="eyebrow">GESTÃO COMERCIAL</p>
+          <h1 id="landingTitle">Bem-vindo ao A.A.C.</h1>
+          <p>Uma central de trabalho para organizar vendas, produtos e a operação do seu negócio.</p>
+          <button className="button button-primary" type="button" onClick={() => setShowWelcome(false)}>Logar</button>
+        </section>
+        <footer className="landing-footer">A.A.C. <span aria-hidden="true">·</span> Gestão comercial</footer>
+      </main>
+    );
   }
 
   return (

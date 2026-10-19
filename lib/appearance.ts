@@ -1,4 +1,8 @@
-export const DEFAULT_ACCENT_COLOR = '#4595ff';
+export const DEFAULT_ACCENT_COLOR = '#ffffff';
+
+export function getDefaultAccentColor() {
+  return document.documentElement.dataset.theme === 'light' ? '#000000' : DEFAULT_ACCENT_COLOR;
+}
 
 function getAccentForeground(color: string) {
   const channels = color.slice(1).match(/.{2}/g)?.map(value => Number.parseInt(value, 16) / 255);
@@ -24,7 +28,8 @@ export function applyAccentColor(color: string) {
 
 export function applySavedAccentColor() {
   const savedColor = window.localStorage.getItem('aac-accent-color');
-  if (savedColor && /^#[\da-f]{6}$/i.test(savedColor)) applyAccentColor(savedColor);
+  if (savedColor === '#4595ff') window.localStorage.removeItem('aac-accent-color');
+  else if (savedColor && /^#[\da-f]{6}$/i.test(savedColor)) applyAccentColor(savedColor);
 }
 
 export function applySavedTheme() {
